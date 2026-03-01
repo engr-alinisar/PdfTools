@@ -1,5 +1,7 @@
 {
-  "buildCommand": "cd pdf-tools-client && npm install && npm run build",
+  "framework": null,
+  "installCommand": "cd pdf-tools-client && npm install",
+  "buildCommand": "cd pdf-tools-client && npm run build",
   "outputDirectory": "pdf-tools-client/dist/pdf-tools-client/browser",
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
