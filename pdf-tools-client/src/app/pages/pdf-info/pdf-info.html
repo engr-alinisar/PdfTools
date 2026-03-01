@@ -1,0 +1,88 @@
+<div class="max-w-2xl mx-auto px-4 py-10">
+
+  <!-- Back -->
+  <a routerLink="/" class="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 mb-8 transition-colors">
+    ← All tools
+  </a>
+
+  <!-- Tool Header -->
+  <div class="text-center mb-10">
+    <div class="w-16 h-16 bg-teal-100 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">ℹ️</div>
+    <h1 class="text-3xl font-bold text-gray-900">PDF Info</h1>
+    <p class="text-gray-500 mt-2">View metadata and details about your PDF file</p>
+  </div>
+
+  @if (!pdfInfo()) {
+    <!-- Upload -->
+    <app-file-upload [multiple]="false" (filesChanged)="onFileChanged($event)" />
+
+    <!-- Action Button -->
+    @if (file()) {
+      <button
+        (click)="getInfo()"
+        [disabled]="isLoading()"
+        class="mt-6 w-full bg-teal-500 hover:bg-teal-600 disabled:bg-teal-300 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl transition-colors text-base">
+        @if (isLoading()) {
+          <span class="flex items-center justify-center gap-2">
+            <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            Reading...
+          </span>
+        } @else {
+          Get PDF Info
+        }
+      </button>
+    }
+
+    <!-- Error -->
+    @if (error()) {
+      <div class="mt-4 bg-red-50 border border-red-100 text-red-600 rounded-xl p-4 text-sm">
+        {{ error() }}
+      </div>
+    }
+  }
+
+  <!-- Results -->
+  @if (pdfInfo()) {
+    <div class="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="font-semibold text-gray-800">Document Details</h2>
+        <button (click)="reset()" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+          Inspect another
+        </button>
+      </div>
+      <table class="w-full text-sm">
+        <tbody>
+          <tr class="border-b border-gray-50">
+            <td class="px-6 py-3 text-gray-500 font-medium w-40">Pages</td>
+            <td class="px-6 py-3 text-gray-800 font-semibold text-base">{{ pdfInfo()!.pageCount }}</td>
+          </tr>
+          <tr class="border-b border-gray-50 bg-gray-50/50">
+            <td class="px-6 py-3 text-gray-500 font-medium">Title</td>
+            <td class="px-6 py-3 text-gray-800">{{ pdfInfo()!.title || '—' }}</td>
+          </tr>
+          <tr class="border-b border-gray-50">
+            <td class="px-6 py-3 text-gray-500 font-medium">Author</td>
+            <td class="px-6 py-3 text-gray-800">{{ pdfInfo()!.author || '—' }}</td>
+          </tr>
+          <tr class="border-b border-gray-50 bg-gray-50/50">
+            <td class="px-6 py-3 text-gray-500 font-medium">Subject</td>
+            <td class="px-6 py-3 text-gray-800">{{ pdfInfo()!.subject || '—' }}</td>
+          </tr>
+          <tr class="border-b border-gray-50">
+            <td class="px-6 py-3 text-gray-500 font-medium">Creator</td>
+            <td class="px-6 py-3 text-gray-800">{{ pdfInfo()!.creator || '—' }}</td>
+          </tr>
+          <tr class="border-b border-gray-50 bg-gray-50/50">
+            <td class="px-6 py-3 text-gray-500 font-medium">Created</td>
+            <td class="px-6 py-3 text-gray-800">{{ formatDate(pdfInfo()!.creationDate) }}</td>
+          </tr>
+          <tr>
+            <td class="px-6 py-3 text-gray-500 font-medium">Modified</td>
+            <td class="px-6 py-3 text-gray-800">{{ formatDate(pdfInfo()!.modificationDate) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  }
+
+</div>

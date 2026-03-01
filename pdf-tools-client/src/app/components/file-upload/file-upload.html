@@ -1,0 +1,53 @@
+<!-- Drop Zone -->
+<div
+  class="border-2 border-dashed rounded-2xl p-14 text-center cursor-pointer transition-all duration-200 select-none"
+  [class.border-red-400]="isDragOver()"
+  [class.bg-red-50]="isDragOver()"
+  [class.border-gray-200]="!isDragOver()"
+  [class.bg-gray-50]="!isDragOver()"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave()"
+  (drop)="onDrop($event)"
+  (click)="fileInput.click()">
+
+  <div class="text-5xl mb-4">📄</div>
+  <p class="text-gray-700 font-semibold text-lg">
+    Drop your PDF {{ multiple() ? 'files' : 'file' }} here
+  </p>
+  <p class="text-gray-400 text-sm mt-1">
+    or <span class="text-red-500 font-medium">click to browse</span>
+  </p>
+  <p class="text-gray-300 text-xs mt-4">PDF only · Max 50MB per file</p>
+
+  <input
+    #fileInput
+    type="file"
+    accept=".pdf,application/pdf"
+    class="hidden"
+    [multiple]="multiple()"
+    (change)="onFileSelect($event)"
+  >
+</div>
+
+<!-- File List -->
+@if (files().length > 0) {
+  <ul class="mt-4 space-y-2">
+    @for (file of files(); track file.name; let i = $index) {
+      <li class="flex items-center justify-between bg-white border border-gray-100 rounded-xl px-4 py-3 shadow-sm">
+        <div class="flex items-center gap-3 min-w-0">
+          <span class="text-xl shrink-0">📄</span>
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-gray-700 truncate">{{ file.name }}</p>
+            <p class="text-xs text-gray-400">{{ formatSize(file.size) }}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          (click)="removeFile(i, $event)"
+          class="ml-4 shrink-0 text-gray-300 hover:text-red-400 transition-colors text-lg leading-none">
+          ✕
+        </button>
+      </li>
+    }
+  </ul>
+}

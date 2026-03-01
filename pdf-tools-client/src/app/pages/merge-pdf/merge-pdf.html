@@ -1,0 +1,61 @@
+<div class="max-w-2xl mx-auto px-4 py-10">
+
+  <!-- Back -->
+  <a routerLink="/" class="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 mb-8 transition-colors">
+    ← All tools
+  </a>
+
+  <!-- Tool Header -->
+  <div class="text-center mb-10">
+    <div class="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">🔀</div>
+    <h1 class="text-3xl font-bold text-gray-900">Merge PDF</h1>
+    <p class="text-gray-500 mt-2">Combine multiple PDF files into a single document</p>
+  </div>
+
+  <!-- Upload -->
+  @if (!success()) {
+    <app-file-upload [multiple]="true" (filesChanged)="onFilesChanged($event)" />
+
+    <!-- Hint -->
+    @if (files().length === 1) {
+      <p class="text-sm text-amber-500 text-center mt-3">Add at least one more PDF to merge</p>
+    }
+
+    <!-- Action Button -->
+    @if (files().length >= 2) {
+      <button
+        (click)="merge()"
+        [disabled]="isLoading()"
+        class="mt-6 w-full bg-red-500 hover:bg-red-600 disabled:bg-red-300 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl transition-colors text-base">
+        @if (isLoading()) {
+          <span class="flex items-center justify-center gap-2">
+            <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            Merging...
+          </span>
+        } @else {
+          Merge {{ files().length }} PDFs
+        }
+      </button>
+    }
+
+    <!-- Error -->
+    @if (error()) {
+      <div class="mt-4 bg-red-50 border border-red-100 text-red-600 rounded-xl p-4 text-sm">
+        {{ error() }}
+      </div>
+    }
+  }
+
+  <!-- Success -->
+  @if (success()) {
+    <div class="bg-green-50 border border-green-100 rounded-2xl p-8 text-center">
+      <div class="text-4xl mb-3">✅</div>
+      <h2 class="text-xl font-semibold text-green-800 mb-1">PDFs merged successfully!</h2>
+      <p class="text-green-600 text-sm">Your download started automatically.</p>
+      <button (click)="reset()" class="mt-6 px-6 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition-colors">
+        Merge more PDFs
+      </button>
+    </div>
+  }
+
+</div>

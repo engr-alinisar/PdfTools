@@ -1,0 +1,36 @@
+<header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+  <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+
+    <!-- Logo -->
+    <a routerLink="/" class="flex items-center gap-2 font-bold text-xl text-gray-800 hover:opacity-80 transition-opacity">
+      <div class="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">P</div>
+      PDF Tools
+    </a>
+
+    <!-- Nav -->
+    <nav class="flex items-center gap-1">
+      <a routerLink="/" routerLinkActive="bg-gray-100 text-gray-900"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+        Home
+      </a>
+      <a routerLink="/merge" routerLinkActive="bg-red-50 text-red-600"
+        class="px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+        Merge
+      </a>
+      <a routerLink="/split" routerLinkActive="bg-blue-50 text-blue-600"
+        class="px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+        Split
+      </a>
+      <a routerLink="/rotate" routerLinkActive="bg-purple-50 text-purple-600"
+        class="px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+        Rotate
+      </a>
+      <a routerLink="/info" routerLinkActive="bg-teal-50 text-teal-600"
+        class="px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+        PDF Info
+      </a>
+    </nav>
+
+  </div>
+</header>
