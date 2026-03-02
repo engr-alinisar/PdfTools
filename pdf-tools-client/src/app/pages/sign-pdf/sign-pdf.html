@@ -9,106 +9,113 @@
   <div class="text-center mb-10">
     <div class="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">✍️</div>
     <h1 class="text-3xl font-bold text-gray-900">Sign PDF</h1>
-    <p class="text-gray-500 mt-2">Add your signature to any PDF document</p>
+    <p class="text-gray-500 mt-2">Draw or type your signature and place it anywhere on your PDF</p>
   </div>
 
-  @if (!success()) {
-    <!-- Upload -->
-    <app-file-upload [multiple]="false" (filesChanged)="onFileChanged($event)" />
+  <!-- ── STAGE: setup ──────────────────────────────────────────────────────── -->
+  @if (stage() === 'setup') {
 
-    @if (file()) {
-      <!-- Signature Text -->
-      <div class="mt-6">
-        <label class="block text-sm font-medium text-gray-700 mb-2">Your signature</label>
+    <!-- Signature Builder -->
+    <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden mb-6">
+
+      <!-- Tab bar -->
+      <div class="flex border-b border-gray-100">
+        <button
+          type="button"
+          (click)="setMode('draw')"
+          class="flex-1 py-3 text-sm font-medium transition-colors"
+          [class.text-blue-600]="signMode() === 'draw'"
+          [class.border-b-2]="signMode() === 'draw'"
+          [class.border-blue-500]="signMode() === 'draw'"
+          [class.text-gray-400]="signMode() !== 'draw'">
+          ✍️ Draw
+        </button>
+        <button
+          type="button"
+          (click)="setMode('type')"
+          class="flex-1 py-3 text-sm font-medium transition-colors"
+          [class.text-blue-600]="signMode() === 'type'"
+          [class.border-b-2]="signMode() === 'type'"
+          [class.border-blue-500]="signMode() === 'type'"
+          [class.text-gray-400]="signMode() !== 'type'">
+          T&nbsp; Type
+        </button>
+      </div>
+
+      <!-- Draw panel (kept in DOM via [hidden] so canvas persists) -->
+      <div [hidden]="signMode() !== 'draw'" class="p-4">
+        <div class="relative rounded-xl overflow-hidden border border-dashed border-gray-300 bg-gray-50" style="height:160px">
+          <canvas
+            #signatureCanvas
+            class="absolute inset-0 w-full h-full cursor-crosshair"
+            (mousedown)="onMouseDown($event)"
+            (mousemove)="onMouseMove($event)"
+            (mouseup)="onMouseUp()"
+            (mouseleave)="onMouseUp()">
+          </canvas>
+          @if (!hasDrawing()) {
+            <p class="absolute inset-0 flex items-center justify-center text-sm text-gray-400 pointer-events-none select-none">
+              Draw your signature here
+            </p>
+          }
+        </div>
+
+        <!-- Color + Clear -->
+        <div class="flex items-center gap-3 mt-3">
+          <span class="text-xs text-gray-500">Color:</span>
+          @for (c of colorOptions; track c.value) {
+            <button
+              type="button"
+              (click)="setColor(c.value)"
+              class="w-7 h-7 rounded-full border-2 transition-all"
+              [class]="c.bg"
+              [class.border-gray-800]="strokeColor() === c.value"
+              [class.scale-110]="strokeColor() === c.value"
+              [class.border-transparent]="strokeColor() !== c.value">
+            </button>
+          }
+          <button
+            type="button"
+            (click)="clearCanvas()"
+            class="ml-auto text-xs text-gray-400 hover:text-gray-600 transition-colors px-2 py-1 rounded hover:bg-gray-100">
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <!-- Type panel -->
+      <div [hidden]="signMode() !== 'type'" class="p-4">
         <input
           type="text"
           [value]="signatureText()"
           (input)="onSignatureInput($event)"
-          placeholder="Type your name"
+          placeholder="Type your full name"
           maxlength="80"
           class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent">
 
-        <!-- Preview -->
         @if (signatureText().trim()) {
-          <div class="mt-3 bg-gray-50 border border-gray-100 rounded-xl px-5 py-4 text-center">
-            <p class="text-xs text-gray-400 mb-2">Preview</p>
-            <p class="italic text-blue-800 text-xl" style="font-family: 'Georgia', serif;">
+          <div class="mt-3 bg-gray-50 border border-gray-100 rounded-xl py-5 text-center">
+            <p class="italic text-blue-800 text-2xl" style="font-family: Georgia, serif; letter-spacing: 0.02em;">
               {{ signatureText() }}
             </p>
-            <div class="mt-1 mx-auto w-48 border-t border-gray-400"></div>
+            <div class="mt-2 mx-auto h-px bg-gray-400" style="width: 200px;"></div>
           </div>
         }
       </div>
+    </div>
 
-      <!-- Position Selector -->
-      <div class="mt-6">
-        <label class="block text-sm font-medium text-gray-700 mb-3">Signature position</label>
-        <div class="flex gap-3">
-          @for (opt of positionOptions; track opt.value) {
-            <button
-              type="button"
-              (click)="setPosition(opt.value)"
-              class="flex-1 py-3 rounded-xl font-medium text-sm border transition-all"
-              [class.bg-blue-500]="position() === opt.value"
-              [class.text-white]="position() === opt.value"
-              [class.border-blue-500]="position() === opt.value"
-              [class.bg-white]="position() !== opt.value"
-              [class.text-gray-600]="position() !== opt.value"
-              [class.border-gray-200]="position() !== opt.value">
-              <span class="block text-lg">{{ opt.icon }}</span>
-              <span class="block text-xs mt-0.5">{{ opt.label }}</span>
-            </button>
-          }
-        </div>
-      </div>
+    <!-- Upload -->
+    <app-file-upload [multiple]="false" (filesChanged)="onFileChanged($event)" />
 
-      <!-- Pages Selector -->
-      <div class="mt-6">
-        <label class="block text-sm font-medium text-gray-700 mb-3">Apply to</label>
-        <div class="grid grid-cols-2 gap-2">
-          @for (opt of pagesModeOptions; track opt.value) {
-            <button
-              type="button"
-              (click)="setPagesMode(opt.value)"
-              class="py-2.5 rounded-xl font-medium text-sm border transition-all"
-              [class.bg-blue-500]="pagesMode() === opt.value"
-              [class.text-white]="pagesMode() === opt.value"
-              [class.border-blue-500]="pagesMode() === opt.value"
-              [class.bg-white]="pagesMode() !== opt.value"
-              [class.text-gray-600]="pagesMode() !== opt.value"
-              [class.border-gray-200]="pagesMode() !== opt.value">
-              {{ opt.label }}
-            </button>
-          }
-        </div>
-
-        @if (pagesMode() === 'custom') {
-          <input
-            type="text"
-            [value]="customPages()"
-            (input)="onCustomPagesInput($event)"
-            placeholder="e.g. 1, 3, 5"
-            class="mt-3 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent">
-        }
-      </div>
-
-      <!-- Action Button -->
+    <!-- Next button -->
+    @if (canProceed()) {
       <button
-        (click)="sign()"
-        [disabled]="!canSign() || isLoading()"
-        class="mt-6 w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl transition-colors text-base">
-        @if (isLoading()) {
-          <span class="flex items-center justify-center gap-2">
-            <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-            Signing...
-          </span>
-        } @else {
-          Sign PDF
-        }
+        (click)="goToPlacement()"
+        class="mt-6 w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 rounded-xl transition-colors text-base">
+        Place Signature on PDF →
       </button>
     }
 
-    <!-- Error -->
     @if (error()) {
       <div class="mt-4 bg-red-50 border border-red-100 text-red-600 rounded-xl p-4 text-sm">
         {{ error() }}
@@ -116,8 +123,147 @@
     }
   }
 
-  <!-- Success -->
-  @if (success()) {
+  <!-- ── STAGE: place ──────────────────────────────────────────────────────── -->
+  @if (stage() === 'place') {
+
+    <!-- Back link -->
+    <button
+      type="button"
+      (click)="backToSetup()"
+      class="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 mb-5 transition-colors">
+      ← Edit signature
+    </button>
+
+    <!-- Instructions -->
+    <p class="text-sm text-gray-500 mb-4 text-center">
+      Drag the blue box to position your signature, then click <strong>Sign PDF</strong>.
+    </p>
+
+    <!-- Page navigation -->
+    @if (pageCount() > 1) {
+      <div class="flex items-center justify-center gap-3 mb-4">
+        <button
+          type="button"
+          (click)="goToPage(-1)"
+          [disabled]="currentPage() === 1"
+          class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          ← Prev
+        </button>
+        <span class="text-sm text-gray-600">Page {{ currentPage() }} / {{ pageCount() }}</span>
+        <button
+          type="button"
+          (click)="goToPage(1)"
+          [disabled]="currentPage() === pageCount()"
+          class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          Next →
+        </button>
+      </div>
+    }
+
+    <!-- PDF canvas with draggable signature overlay -->
+    <div
+      #pdfContainer
+      class="relative border border-gray-200 rounded-2xl overflow-hidden shadow-sm bg-gray-100">
+
+      @if (isRenderingPdf()) {
+        <div class="flex items-center justify-center h-64">
+          <span class="w-8 h-8 border-4 border-blue-300 border-t-blue-600 rounded-full animate-spin"></span>
+        </div>
+      }
+
+      <canvas #pdfCanvas [hidden]="isRenderingPdf()" class="block w-full"></canvas>
+
+      <!-- Draggable signature overlay -->
+      @if (!isRenderingPdf() && renderedPageWidth() > 0) {
+        <div
+          class="absolute select-none"
+          [class.cursor-grab]="!isDragging"
+          [class.cursor-grabbing]="isDragging"
+          [style.left.px]="sigX()"
+          [style.top.px]="sigY()"
+          [style.width.px]="sigBoxWidth"
+          (mousedown)="onSigMouseDown($event)">
+
+          <!-- Drag label above box -->
+          <div class="flex justify-center mb-1">
+            <span class="text-[10px] text-blue-500 bg-white px-1.5 py-0.5 rounded-full shadow-sm border border-blue-200 select-none whitespace-nowrap">
+              drag to position
+            </span>
+          </div>
+
+          <!-- Signature preview box -->
+          <div class="border-2 border-blue-500 rounded-md bg-white/90 overflow-hidden shadow-md"
+               [style.height.px]="sigBoxHeight()">
+
+            @if (signMode() === 'draw' && drawnSigDataUrl()) {
+              <img [src]="drawnSigDataUrl()" class="w-full h-full object-contain pointer-events-none" alt="signature">
+            } @else if (signMode() === 'type') {
+              <div class="w-full h-full flex items-center justify-center px-2">
+                <span class="text-blue-800 italic truncate text-sm pointer-events-none"
+                      style="font-family: Georgia, serif;">
+                  {{ signatureText() }}
+                </span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Apply to pages -->
+    <div class="mt-6">
+      <label class="block text-sm font-medium text-gray-700 mb-3">Apply signature to</label>
+      <div class="grid grid-cols-2 gap-2">
+        @for (opt of pagesModeOptions; track opt.value) {
+          <button
+            type="button"
+            (click)="setPagesMode(opt.value)"
+            class="py-2.5 rounded-xl border text-sm font-medium transition-all"
+            [class.bg-blue-500]="pagesMode() === opt.value"
+            [class.text-white]="pagesMode() === opt.value"
+            [class.border-blue-500]="pagesMode() === opt.value"
+            [class.bg-white]="pagesMode() !== opt.value"
+            [class.text-gray-600]="pagesMode() !== opt.value"
+            [class.border-gray-200]="pagesMode() !== opt.value">
+            {{ opt.label }}
+          </button>
+        }
+      </div>
+
+      @if (pagesMode() === 'custom') {
+        <input
+          type="text"
+          [value]="customPages()"
+          (input)="onCustomPagesInput($event)"
+          placeholder="e.g. 1, 3, 5"
+          class="mt-3 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent">
+      }
+    </div>
+
+    <!-- Sign button -->
+    <button
+      (click)="sign()"
+      [disabled]="isLoading()"
+      class="mt-6 w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl transition-colors text-base">
+      @if (isLoading()) {
+        <span class="flex items-center justify-center gap-2">
+          <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+          Signing...
+        </span>
+      } @else {
+        Sign PDF
+      }
+    </button>
+
+    @if (error()) {
+      <div class="mt-4 bg-red-50 border border-red-100 text-red-600 rounded-xl p-4 text-sm">
+        {{ error() }}
+      </div>
+    }
+  }
+
+  <!-- ── STAGE: success ────────────────────────────────────────────────────── -->
+  @if (stage() === 'success') {
     <div class="bg-green-50 border border-green-100 rounded-2xl p-8 text-center">
       <div class="text-4xl mb-3">✅</div>
       <h2 class="text-xl font-semibold text-green-800 mb-1">PDF signed successfully!</h2>

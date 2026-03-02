@@ -49,16 +49,22 @@ export class PdfApiService {
 
   sign(
     file: File,
-    text: string,
-    position: string,
+    xFraction: number,
+    yFraction: number,
+    widthFraction: number,
     pagesMode: string,
+    text?: string,
+    imageData?: string,
     pages?: string,
   ): Observable<Blob> {
     const form = new FormData();
     form.append('file', file);
-    form.append('text', text);
-    form.append('position', position);
+    form.append('xFraction', xFraction.toString());
+    form.append('yFraction', yFraction.toString());
+    form.append('widthFraction', widthFraction.toString());
     form.append('pagesMode', pagesMode);
+    if (text) form.append('text', text);
+    if (imageData) form.append('imageData', imageData);
     if (pages) form.append('pages', pages);
     return this.http.post(API_URL + '/sign', form, { responseType: 'blob' });
   }

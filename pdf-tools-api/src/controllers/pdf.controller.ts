@@ -107,11 +107,18 @@ export async function sign(req: Request, res: Response, next: NextFunction): Pro
     if (!file) throw createError('No PDF file uploaded.', 400);
 
     const text = String(req.body['text'] ?? '').trim();
-    if (!text) throw createError('Signature text is required.', 400);
+    const imageData = String(req.body['imageData'] ?? '').trim();
 
-    const position = req.body['position'] ?? 'bottom-right';
-    if (!['bottom-left', 'bottom-center', 'bottom-right'].includes(position)) {
-      throw createError('position must be bottom-left, bottom-center, or bottom-right.', 400);
+    if (!text && !imageData) {
+      throw createError('Either a drawn signature or signature text is required.', 400);
+    }
+
+    const xFraction = parseFloat(req.body['xFraction'] ?? '0');
+    const yFraction = parseFloat(req.body['yFraction'] ?? '0');
+    const widthFraction = parseFloat(req.body['widthFraction'] ?? '0.3');
+
+    if ([xFraction, yFraction, widthFraction].some(isNaN)) {
+      throw createError('xFraction, yFraction, and widthFraction must be numbers.', 400);
     }
 
     const pagesMode = req.body['pagesMode'] ?? 'all';
@@ -129,8 +136,11 @@ export async function sign(req: Request, res: Response, next: NextFunction): Pro
         : [];
 
     const result = await pdfService.signPdf(file.buffer, {
-      text,
-      position: position as pdfService.SignPosition,
+      text: text || undefined,
+      imageData: imageData || undefined,
+      xFraction,
+      yFraction,
+      widthFraction,
       pagesMode: pagesMode as pdfService.SignPagesMode,
       customPages,
     });

@@ -258,28 +258,33 @@ export async function compressPdf(
   }
 }
 
-export type SignPosition = 'bottom-left' | 'bottom-center' | 'bottom-right';
 export type SignPagesMode = 'all' | 'first' | 'last' | 'custom';
 
 export interface SignOptions {
-  text: string;
-  position: SignPosition;
+  /** Horizontal position of the signature's left edge, as a fraction of page width (0–1). */
+  xFraction: number;
+  /** Vertical position of the signature's top edge, as a fraction of page height (0–1, from top). */
+  yFraction: number;
+  /** Signature width as a fraction of page width (0–1). */
+  widthFraction: number;
   pagesMode: SignPagesMode;
   customPages?: number[]; // 1-based, only used when pagesMode === 'custom'
+  text?: string;          // typed text signature
+  imageData?: string;     // base64 PNG data URL from canvas drawing
 }
 
 /**
- * Adds a visual text signature to specified pages of a PDF.
+ * Adds a visual signature (drawn image or typed text) to specified pages of a PDF.
+ * Position is specified as fractions of the page dimensions (CSS top-left origin).
  */
 export async function signPdf(buffer: Buffer, options: SignOptions): Promise<Buffer> {
   validatePdfBuffer(buffer);
 
-  if (!options.text.trim()) {
-    throw createError('Signature text cannot be empty.', 400);
+  if (!options.imageData && !options.text?.trim()) {
+    throw createError('Either a drawn signature or signature text is required.', 400);
   }
 
   const doc = await PDFDocument.load(buffer);
-  const font = await doc.embedFont(StandardFonts.HelveticaOblique);
   const totalPages = doc.getPageCount();
 
   let pageIndices: number[];
@@ -306,45 +311,55 @@ export async function signPdf(buffer: Buffer, options: SignOptions): Promise<Buf
     throw createError('No valid pages to sign.', 400);
   }
 
-  const fontSize = 22;
-  const margin = 30;
-  const inkColor = rgb(0.0, 0.1, 0.55);
-  const lineColor = rgb(0.4, 0.4, 0.4);
+  if (options.imageData) {
+    // Drawn signature: embed as PNG image
+    const base64 = options.imageData.replace(/^data:image\/[a-z]+;base64,/, '');
+    const pngBuffer = Buffer.from(base64, 'base64');
+    const pngImage = await doc.embedPng(pngBuffer);
 
-  for (const idx of pageIndices) {
-    const page = doc.getPage(idx);
-    const { width } = page.getSize();
-    const textWidth = font.widthOfTextAtSize(options.text, fontSize);
+    for (const idx of pageIndices) {
+      const page = doc.getPage(idx);
+      const { width: pageWidth, height: pageHeight } = page.getSize();
 
-    let x: number;
-    switch (options.position) {
-      case 'bottom-left':
-        x = margin;
-        break;
-      case 'bottom-center':
-        x = (width - textWidth) / 2;
-        break;
-      default: // 'bottom-right'
-        x = width - textWidth - margin;
+      const sigWidth = options.widthFraction * pageWidth;
+      const sigHeight = sigWidth * (pngImage.height / pngImage.width);
+
+      // Convert from CSS top-left origin to PDF bottom-left origin
+      const pdfX = options.xFraction * pageWidth;
+      const pdfY = pageHeight - options.yFraction * pageHeight - sigHeight;
+
+      page.drawImage(pngImage, { x: pdfX, y: pdfY, width: sigWidth, height: sigHeight });
     }
+  } else {
+    // Typed text signature
+    const font = await doc.embedFont(StandardFonts.HelveticaOblique);
+    const fontSize = 22;
+    const inkColor = rgb(0.0, 0.1, 0.55);
+    const lineColor = rgb(0.4, 0.4, 0.4);
+    const text = options.text!;
 
-    const y = margin;
+    for (const idx of pageIndices) {
+      const page = doc.getPage(idx);
+      const { width: pageWidth, height: pageHeight } = page.getSize();
+      const textWidth = font.widthOfTextAtSize(text, fontSize);
 
-    // Underline above the signature text
-    page.drawLine({
-      start: { x: x - 2, y: y + fontSize + 6 },
-      end: { x: x + textWidth + 2, y: y + fontSize + 6 },
-      thickness: 0.75,
-      color: lineColor,
-    });
+      // Scale text to fit the requested width fraction
+      const requestedWidth = options.widthFraction * pageWidth;
+      const scale = Math.min(1, requestedWidth / Math.max(textWidth, 1));
+      const scaledFontSize = fontSize * scale;
+      const scaledTextWidth = font.widthOfTextAtSize(text, scaledFontSize);
 
-    page.drawText(options.text, {
-      x,
-      y,
-      size: fontSize,
-      font,
-      color: inkColor,
-    });
+      const pdfX = options.xFraction * pageWidth;
+      const pdfY = pageHeight - options.yFraction * pageHeight - scaledFontSize;
+
+      page.drawLine({
+        start: { x: pdfX - 2, y: pdfY + scaledFontSize + 4 },
+        end: { x: pdfX + scaledTextWidth + 2, y: pdfY + scaledFontSize + 4 },
+        thickness: 0.75,
+        color: lineColor,
+      });
+      page.drawText(text, { x: pdfX, y: pdfY, size: scaledFontSize, font, color: inkColor });
+    }
   }
 
   const bytes = await doc.save();
