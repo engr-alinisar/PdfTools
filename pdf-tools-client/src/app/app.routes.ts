@@ -19,6 +19,15 @@ export const routes: Routes = [
       import('./pages/rotate-pdf/rotate-pdf').then((m) => m.RotatePdfComponent),
   },
   {
+    path: 'compress',
+    loadComponent: () =>
+      import('./pages/compress-pdf/compress-pdf').then((m) => m.CompressPdfComponent),
+  },
+  {
+    path: 'sign',
+    loadComponent: () => import('./pages/sign-pdf/sign-pdf').then((m) => m.SignPdfComponent),
+  },
+  {
     path: 'info',
     loadComponent: () => import('./pages/pdf-info/pdf-info').then((m) => m.PdfInfoComponent),
   },

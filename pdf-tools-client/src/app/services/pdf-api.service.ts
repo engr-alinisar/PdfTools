@@ -1,8 +1,14 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { PdfInfo } from '../models/pdf-info.model';
 import { environment } from '../../environments/environment';
+
+export interface CompressResponse {
+  blob: Blob;
+  originalSize: number;
+  compressedSize: number;
+}
 
 const API_URL = environment.apiUrl;
 
@@ -29,6 +35,32 @@ export class PdfApiService {
     form.append('angle', angle.toString());
     if (pages) form.append('pages', pages);
     return this.http.post(API_URL + '/rotate', form, { responseType: 'blob' });
+  }
+
+  compress(file: File, quality: 'low' | 'medium' | 'high'): Observable<HttpResponse<Blob>> {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('quality', quality);
+    return this.http.post(API_URL + '/compress', form, {
+      responseType: 'blob',
+      observe: 'response',
+    });
+  }
+
+  sign(
+    file: File,
+    text: string,
+    position: string,
+    pagesMode: string,
+    pages?: string,
+  ): Observable<Blob> {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('text', text);
+    form.append('position', position);
+    form.append('pagesMode', pagesMode);
+    if (pages) form.append('pages', pages);
+    return this.http.post(API_URL + '/sign', form, { responseType: 'blob' });
   }
 
   info(file: File): Observable<{ data: PdfInfo }> {

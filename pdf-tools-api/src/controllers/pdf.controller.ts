@@ -77,6 +77,70 @@ export async function rotate(req: Request, res: Response, next: NextFunction): P
   }
 }
 
+export async function compress(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const file = req.file;
+    if (!file) throw createError('No PDF file uploaded.', 400);
+
+    const quality = req.body['quality'] ?? 'medium';
+    if (!['low', 'medium', 'high'].includes(quality)) {
+      throw createError('quality must be low, medium, or high.', 400);
+    }
+
+    const result = await pdfService.compressPdf(file.buffer, quality as pdfService.CompressQuality);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': 'attachment; filename="compressed.pdf"',
+      'Content-Length': result.data.length,
+      'X-Original-Size': String(result.info.originalSize),
+      'X-Compressed-Size': String(result.info.compressedSize),
+    });
+    res.send(result.data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function sign(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const file = req.file;
+    if (!file) throw createError('No PDF file uploaded.', 400);
+
+    const text = String(req.body['text'] ?? '').trim();
+    if (!text) throw createError('Signature text is required.', 400);
+
+    const position = req.body['position'] ?? 'bottom-right';
+    if (!['bottom-left', 'bottom-center', 'bottom-right'].includes(position)) {
+      throw createError('position must be bottom-left, bottom-center, or bottom-right.', 400);
+    }
+
+    const pagesMode = req.body['pagesMode'] ?? 'all';
+    if (!['all', 'first', 'last', 'custom'].includes(pagesMode)) {
+      throw createError('pagesMode must be all, first, last, or custom.', 400);
+    }
+
+    const rawPages = req.body['pages'];
+    const customPages =
+      pagesMode === 'custom' && rawPages
+        ? String(rawPages)
+            .split(',')
+            .map((p) => parseInt(p.trim(), 10))
+            .filter((p) => !isNaN(p))
+        : [];
+
+    const result = await pdfService.signPdf(file.buffer, {
+      text,
+      position: position as pdfService.SignPosition,
+      pagesMode: pagesMode as pdfService.SignPagesMode,
+      customPages,
+    });
+
+    sendPdfResponse(res, result, 'signed.pdf');
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function info(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const file = req.file;

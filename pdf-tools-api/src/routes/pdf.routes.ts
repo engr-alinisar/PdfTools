@@ -13,5 +13,11 @@ pdfRoutes.post('/split', uploadSingle, pdfController.split);
 // POST /api/pdf/rotate — body: multipart file + angle (90|180|270) + optional pages
 pdfRoutes.post('/rotate', uploadSingle, pdfController.rotate);
 
+// POST /api/pdf/compress — body: multipart file → returns compressed PDF
+pdfRoutes.post('/compress', uploadSingle, pdfController.compress);
+
+// POST /api/pdf/sign    — body: multipart file + text + position + pagesMode + optional pages
+pdfRoutes.post('/sign', uploadSingle, pdfController.sign);
+
 // POST /api/pdf/info   — body: multipart file → returns PDF metadata
 pdfRoutes.post('/info', uploadSingle, pdfController.info);

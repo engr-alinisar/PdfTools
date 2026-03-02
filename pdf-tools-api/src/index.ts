@@ -15,6 +15,7 @@ app.use(
     origin: env.corsOrigins,
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type'],
+    exposedHeaders: ['X-Original-Size', 'X-Compressed-Size'],
   }),
 );
 
