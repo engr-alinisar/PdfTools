@@ -71,9 +71,7 @@ export class CompressPdfComponent {
         this.isLoading.set(false);
       },
       error: () => {
-        this.error.set(
-          'Compression failed. Make sure Ghostscript is installed on the server and available in PATH.',
-        );
+        this.error.set('Compression failed. Please try again or use a different file.');
         this.isLoading.set(false);
       },
     });

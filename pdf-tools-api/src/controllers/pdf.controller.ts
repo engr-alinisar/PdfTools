@@ -94,6 +94,7 @@ export async function compress(req: Request, res: Response, next: NextFunction):
       'Content-Length': result.data.length,
       'X-Original-Size': String(result.info.originalSize),
       'X-Compressed-Size': String(result.info.compressedSize),
+      'X-Compress-Method': result.info.method,
     });
     res.send(result.data);
   } catch (err) {

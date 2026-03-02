@@ -160,27 +160,25 @@ export async function rotatePdf(buffer: Buffer, options: RotateOptions): Promise
 export interface CompressResult {
   originalSize: number;
   compressedSize: number;
+  method: 'ghostscript' | 'pdf-lib';
 }
 
 export type CompressQuality = 'low' | 'medium' | 'high';
 
 // Per-quality image resolution settings
 const GS_QUALITY_ARGS: Record<CompressQuality, string[]> = {
-  // Maximum compression: 72 dpi images, aggressively downsampled
   low: [
     '-dPDFSETTINGS=/screen',
     '-dColorImageResolution=72',
     '-dGrayImageResolution=72',
     '-dMonoImageResolution=150',
   ],
-  // Balanced: 150 dpi images — good for typical documents
   medium: [
     '-dPDFSETTINGS=/ebook',
     '-dColorImageResolution=150',
     '-dGrayImageResolution=150',
     '-dMonoImageResolution=300',
   ],
-  // High quality: 300 dpi images — minimal size reduction
   high: [
     '-dPDFSETTINGS=/printer',
     '-dColorImageResolution=300',
@@ -189,7 +187,6 @@ const GS_QUALITY_ARGS: Record<CompressQuality, string[]> = {
   ],
 };
 
-// Applied at every quality level
 const GS_COMMON_ARGS = [
   '-sDEVICE=pdfwrite',
   '-dCompatibilityLevel=1.4',
@@ -202,9 +199,6 @@ const GS_COMMON_ARGS = [
   '-dDownsampleColorImages=true',
   '-dDownsampleGrayImages=true',
   '-dDownsampleMonoImages=true',
-  // Threshold=1.0 means: downsample any image at or above the target DPI.
-  // The GS default is 1.5 — so a 200 DPI image targeting 150 DPI (ratio=1.33)
-  // would be skipped. Setting 1.0 ensures it always gets downsampled.
   '-dColorImageDownsampleThreshold=1.0',
   '-dGrayImageDownsampleThreshold=1.0',
   '-dMonoImageDownsampleThreshold=1.0',
@@ -213,8 +207,32 @@ const GS_COMMON_ARGS = [
 ];
 
 /**
- * Compresses a PDF using Ghostscript (recompresses images and content streams).
- * Requires Ghostscript to be installed on the server.
+ * Fallback compression using pdf-lib only (no Ghostscript required).
+ * Re-saves the PDF with object streams and Flate-compressed content streams.
+ * Does not downsample images — best suited for text-heavy documents.
+ */
+async function compressPdfWithPdfLib(
+  buffer: Buffer,
+): Promise<{ data: Buffer; info: CompressResult }> {
+  const doc = await PDFDocument.load(buffer, { updateMetadata: false });
+  const bytes = await doc.save({ useObjectStreams: true });
+  const compressed = Buffer.from(bytes);
+  const best = compressed.length < buffer.length ? compressed : buffer;
+  return {
+    data: best,
+    info: {
+      originalSize: buffer.length,
+      compressedSize: best.length,
+      method: 'pdf-lib',
+    },
+  };
+}
+
+/**
+ * Compresses a PDF. Uses Ghostscript when available (best compression, including
+ * image downsampling). Falls back to a pure pdf-lib re-save when Ghostscript is
+ * not installed (e.g. Vercel serverless). The fallback compresses structure and
+ * content streams but does not re-encode embedded images.
  */
 export async function compressPdf(
   buffer: Buffer,
@@ -223,11 +241,9 @@ export async function compressPdf(
   validatePdfBuffer(buffer);
 
   const gs = await findGhostscript();
+
   if (!gs) {
-    throw createError(
-      'PDF compression requires Ghostscript. Install it from https://www.ghostscript.com/download/gsdnld.html and ensure it is on your PATH.',
-      500,
-    );
+    return compressPdfWithPdfLib(buffer);
   }
 
   const id = randomUUID();
@@ -244,13 +260,13 @@ export async function compressPdf(
     );
 
     const compressed = await readFile(outputPath);
-    // Never return a larger file than the original
     const best = compressed.length < buffer.length ? compressed : buffer;
     return {
       data: best,
       info: {
         originalSize: buffer.length,
         compressedSize: best.length,
+        method: 'ghostscript',
       },
     };
   } finally {
